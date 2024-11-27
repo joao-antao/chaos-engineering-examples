@@ -1,6 +1,5 @@
 @Pandemonium_HostAddress = http://localhost:5248
 
-GET {{Pandemonium_HostAddress}}/weatherforecast/
+GET {{Pandemonium_HostAddress}}/pandemonium/
 Accept: application/json
 
-###
