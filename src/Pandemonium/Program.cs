@@ -4,6 +4,8 @@ using Polly.Simmy;
 using System.Net.Mime;
 using System.Net;
 using Pandemonium;
+using Polly.Retry;
+using Polly.CircuitBreaker;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,21 +17,21 @@ builder.Services.AddHttpClient("fake-http-client", (sp, httpClient) =>
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {
     AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-}).AddResilienceHandler("pandemonium-pipeline", (ResiliencePipelineBuilder<HttpResponseMessage> builder) =>
+}).AddResilienceHandler("pandemonium-pipeline", resiliencePipelineBuilder =>
  {
-     //builder
-     //    .AddConcurrencyLimiter(10, 100)
-     //    .AddRetry(new RetryStrategyOptions<HttpResponseMessage> { /* configuration options */ })
-     //    .AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage> { /* configuration options */ })
-     //    .AddTimeout(TimeSpan.FromSeconds(5));
+     resiliencePipelineBuilder
+         .AddConcurrencyLimiter(10, 100)
+         .AddRetry(new RetryStrategyOptions<HttpResponseMessage> { })
+         .AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage> { })
+         .AddTimeout(TimeSpan.FromSeconds(5));
 
      // Inject chaos into 50% of invocations
-     const double InjectionRate = 0.5;
+     const double injectionRate = 0.5;
 
-     builder
-         .AddChaosLatency(InjectionRate, TimeSpan.FromSeconds(3))
-         .AddChaosFault(InjectionRate, () => new InvalidOperationException("Chaos fault!"))
-         .AddChaosOutcome(InjectionRate, () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+     resiliencePipelineBuilder
+         .AddChaosLatency(injectionRate, TimeSpan.FromSeconds(3))
+         .AddChaosFault(injectionRate, () => new InvalidOperationException("Chaos fault!"))
+         .AddChaosOutcome(injectionRate, () => new HttpResponseMessage(HttpStatusCode.InternalServerError));
  });
 
 var app = builder.Build();
